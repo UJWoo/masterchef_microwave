@@ -1,15 +1,10 @@
 // ==========================================
-// 1. 初始化設定 (已強制切換為純本地 LocalStorage 離線模式，免設定金鑰)
+// 1. 全域變數與 4 筆大廚黃金黃金公式
 // ==========================================
-let supabase = null; // 強制關閉雲端初始化，徹底防呆、防報錯崩潰
-
-// 全域狀態管理變數
 let globalRecipes = [];
-let currentUser = null;
 let isFormDirty = false;
-let shoppingCartIngredients = []; // 🛒 採買清單數組
+let shoppingCartIngredients = []; 
 
-// 4 筆內建大廚金牌示範公式
 const DEMO_RECIPES = [
     {
         id: "demo-1", title: "黃金比例微波蒸蛋", date: "2026-06-27", category: "配菜", tags: ["快速料理", "一人份"],
@@ -44,19 +39,16 @@ const DEMO_RECIPES = [
 ];
 
 // ==========================================
-// 2. 生命週期與核心事件初始化
+// 2. 初始化核心事件註冊
 // ==========================================
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
     initDOMEvents();
-    // 移除雲端判斷，直接隱藏載入中，並載入本地資料庫
-    document.getElementById("user-status").innerHTML = "👤 本地離線手帳模式";
-    document.getElementById("auth-btn").style.display = "none"; // 隱藏無效的登入按鈕
     loadRecipes();
     renderShoppingCart();
 });
 
 function initDOMEvents() {
-    // 基礎開關彈窗
+    // 彈窗開關
     document.getElementById("open-add-modal-btn").addEventListener("click", () => openRecipeModal());
     document.getElementById("open-data-mgr-btn").addEventListener("click", openDataMgrModal);
     
@@ -65,9 +57,8 @@ function initDOMEvents() {
     document.getElementById("close-detail-modal").addEventListener("click", () => closeIdModal("detail-modal"));
     document.getElementById("detail-close-btn").addEventListener("click", () => closeIdModal("detail-modal"));
     document.getElementById("close-data-modal").addEventListener("click", () => closeIdModal("data-mgr-modal"));
-    document.getElementById("close-auth-modal").addEventListener("click", () => closeIdModal("auth-modal"));
     
-    // 動態表單增減
+    // 表單動態增減
     document.getElementById("add-ingredient-btn").addEventListener("click", () => addIngredientRow());
     document.getElementById("add-step-btn").addEventListener("click", () => addStepRow());
     document.getElementById("form-equipment").addEventListener("change", toggleEquipmentPanels);
@@ -76,21 +67,25 @@ function initDOMEvents() {
     });
     document.getElementById("save-recipe-btn").addEventListener("click", handleSaveRecipe);
 
-    // 🧮 自動換算器即時監聽
+    // 🧮 換算助理
     document.getElementById("calc-recipe-w").addEventListener("input", calculateMicrowaveTime);
     document.getElementById("calc-recipe-m").addEventListener("input", calculateMicrowaveTime);
     document.getElementById("calc-recipe-s").addEventListener("input", calculateMicrowaveTime);
     document.getElementById("calc-home-w").addEventListener("input", calculateMicrowaveTime);
 
-    // 🛒 購物車清空按鈕
+    // 📲 密碼本手動同步按鈕
+    document.getElementById("btn-copy-code").addEventListener("click", generateSyncCode);
+    document.getElementById("btn-paste-code").addEventListener("click", loadSyncCode);
+
+    // 🛒 採買清單清空
     document.getElementById("clear-cart-btn").addEventListener("click", () => {
-        if (shoppingCartIngredients.length > 0 && confirm("確定要清空這張採買便條紙嗎？")) {
+        if (shoppingCartIngredients.length > 0 && confirm("確定要清空採買便條紙嗎？")) {
             shoppingCartIngredients = [];
             renderShoppingCart();
         }
     });
 
-    // 搜尋功能
+    // 搜尋與篩選
     document.getElementById("search-input").addEventListener("input", filterRecipes);
     document.querySelectorAll("#quick-filters .filter-btn").forEach(btn => {
         btn.addEventListener("click", (e) => {
@@ -104,12 +99,56 @@ function initDOMEvents() {
     document.getElementById("export-btn").addEventListener("click", exportData);
     document.getElementById("import-file").addEventListener("change", importData);
     document.getElementById("clear-all-btn").addEventListener("click", clearAllData);
-
     document.getElementById("recipe-form").addEventListener("input", () => { isFormDirty = true; });
 }
 
 // ==========================================
-// 3. 🧮 微波爐功率加熱換算器核心邏輯
+// 3. 📲 萬用手帳密碼本代碼同步核心邏輯
+// ==========================================
+function generateSyncCode() {
+    if (globalRecipes.length === 0) return alert("目前沒有資料可以生成唷！");
+    try {
+        // 將資料物件轉成字串，並進行 Base64 編碼，防止亂碼且方便複製
+        const jsonStr = JSON.stringify(globalRecipes);
+        const base64Code = btoa(encodeURIComponent(jsonStr));
+        
+        const txtArea = document.createElement("textarea");
+        txtArea.value = base64Code;
+        document.body.appendChild(txtArea);
+        txtArea.select();
+        document.execCommand("copy");
+        txtArea.remove();
+        
+        alert("📋 成功！整本手帳密碼已複製到您的剪貼簿中。\n\n您可以直接用 LINE 或備忘錄傳到手機，並在手機上下方的輸入框『載入代碼』即可完成同步！");
+    } catch (err) {
+        alert("代碼生成失敗，建議使用下方的 JSON 檔案匯出備份。");
+    }
+}
+
+function loadSyncCode() {
+    const code = document.getElementById("txt-import-code").value.trim();
+    if (!code) return alert("請先貼上從其他裝置複製過來的長串代碼！");
+    
+    if (confirm("這項操作將會完全覆蓋此裝置上的現有紀錄，確定要同步載入嗎？")) {
+        try {
+            const jsonStr = decodeURIComponent(atob(code));
+            const parsedData = JSON.parse(jsonStr);
+            
+            if (!Array.isArray(parsedData)) throw new Error("無效的資料結構");
+            
+            globalRecipes = parsedData;
+            saveRecipes();
+            document.getElementById("txt-import-code").value = "";
+            closeIdModal("data-mgr-modal");
+            alert("⚡ 萬用同步成功！整本手帳紀錄已完美複製到這台裝置。");
+        } catch (err) {
+            alert("❌ 載入失敗！代碼可能不完整或格式有誤，請確認是否完整複製。");
+        }
+    }
+}
+
+// ==========================================
+// 4. 🧮 功率換算核心
 // ==========================================
 function calculateMicrowaveTime() {
     const recipeW = parseFloat(document.getElementById("calc-recipe-w").value) || 0;
@@ -119,7 +158,7 @@ function calculateMicrowaveTime() {
     const resultDiv = document.getElementById("calc-result");
 
     if (recipeW <= 0 || homeW <= 0 || (recipeM === 0 && recipeS === 0)) {
-        resultDiv.innerText = "請輸入正確數值";
+        resultDiv.innerText = "請輸入正確參數";
         return;
     }
 
@@ -132,7 +171,7 @@ function calculateMicrowaveTime() {
 }
 
 // ==========================================
-// 4. 🛒 採買清單購物車核心邏輯
+// 5. 🛒 採買清單核心
 // ==========================================
 function addRecipeIngredientsToCart(recipeId) {
     const recipe = globalRecipes.find(r => r.id === recipeId);
@@ -142,15 +181,12 @@ function addRecipeIngredientsToCart(recipeId) {
         const isDuplicate = shoppingCartIngredients.some(item => item.name === ing.name && item.amount === ing.amount);
         if (!isDuplicate) {
             shoppingCartIngredients.push({
-                name: ing.name,
-                amount: ing.amount,
-                completed: false,
-                sourceTitle: recipe.title
+                name: ing.name, amount: ing.amount, completed: false, sourceTitle: recipe.title
             });
         }
     });
     renderShoppingCart();
-    alert(`已成功將「${recipe.title}」的食材加入下方採買便條紙！`);
+    alert(`已將「${recipe.title}」的食材加入下方採買便條紙！`);
 }
 
 function renderShoppingCart() {
@@ -189,9 +225,9 @@ function removeCartItem(idx) {
 }
 
 // ==========================================
-// 5. 資料庫 CRUD 與渲染核心
+// 6. 資料庫儲存與卡片渲染
 // ==========================================
-async function loadRecipes() {
+function loadRecipes() {
     const localData = localStorage.getItem("nocook_chef_recipes");
     if (localData) { 
         globalRecipes = JSON.parse(localData); 
@@ -203,7 +239,7 @@ async function loadRecipes() {
     updateDashboardStats();
 }
 
-async function saveRecipes() {
+function saveRecipes() {
     localStorage.setItem("nocook_chef_recipes", JSON.stringify(globalRecipes)); 
     renderRecipes(globalRecipes); 
     updateDashboardStats();
@@ -277,7 +313,7 @@ function filterRecipes() {
 }
 
 // ==========================================
-// 6. 表單彈窗控制及資料處理
+// 7. 表單彈窗欄位增減處理
 // ==========================================
 function openRecipeModal(recipeId = null) {
     isFormDirty = false;
@@ -346,14 +382,14 @@ function toggleEquipmentPanels() {
 
 function addIngredientRow(name = "", amount = "", prep = "") {
     const div = document.createElement("div"); div.className = "dynamic-row ingredient-item";
-    div.innerHTML = `<input type="text" placeholder="食材" class="ing-name" value="${escapeHTML(name)}" style="flex:2;"><input type="text" placeholder="份量" class="ing-amount" value="${escapeHTML(amount)}" style="flex:1;"><input type="text" placeholder="備料" class="ing-prep" value="${escapeHTML(prep)}" style="flex:1;"><button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">❌</button>`;
+    div.innerHTML = `<input type="text" placeholder="食材名稱" class="ing-name" value="${escapeHTML(name)}" style="flex:2;"><input type="text" placeholder="份量" class="ing-amount" value="${escapeHTML(amount)}" style="flex:1;"><input type="text" placeholder="備料" class="ing-prep" value="${escapeHTML(prep)}" style="flex:1;"><button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">❌</button>`;
     document.getElementById("ingredients-container").appendChild(div);
 }
 
 function addStepRow(desc = "", equip = "無", time = "", note = "") {
     const container = document.getElementById("steps-container");
     const div = document.createElement("div"); div.className = "dynamic-row step-item";
-    div.innerHTML = `<span class="step-order" style="font-weight:bold; color:var(--sage-green);">${container.children.length + 1}</span><input type="text" placeholder="操作說明..." class="step-desc" value="${escapeHTML(desc)}" style="flex:3;" required><input type="text" placeholder="設備" class="step-equip" value="${escapeHTML(equip)}" style="flex:1;"><input type="text" placeholder="時間" class="step-time" value="${escapeHTML(time)}" style="flex:1;"><input type="text" placeholder="備註" class="step-note" value="${escapeHTML(note)}" style="flex:1;"><button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove(); reindexSteps();">❌</button>`;
+    div.innerHTML = `<span class="step-order" style="font-weight:bold; color:var(--sage-green); margin-right:5px;">${container.children.length + 1}</span><input type="text" placeholder="操作說明步驟..." class="step-desc" value="${escapeHTML(desc)}" style="flex:3;" required><input type="text" placeholder="設備" class="step-equip" value="${escapeHTML(equip)}" style="flex:1;"><input type="text" placeholder="時間" class="step-time" value="${escapeHTML(time)}" style="flex:1;"><input type="text" placeholder="注意事項" class="step-note" value="${escapeHTML(note)}" style="flex:1;"><button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove(); reindexSteps();">❌</button>`;
     container.appendChild(div);
 }
 
@@ -361,10 +397,10 @@ function reindexSteps() {
     document.querySelectorAll("#steps-container .step-item").forEach((s, i) => s.querySelector(".step-order").innerText = i + 1);
 }
 
-async function handleSaveRecipe() {
+function handleSaveRecipe() {
     const title = document.getElementById("form-title").value.trim();
     if (!title) return alert("請填寫料理實驗名稱！");
-    const id = document.getElementById("form-recipe-id").value;
+    const id = document.getElementById("form-recipe-id").value || "rec_" + Date.now();
 
     const tags = []; document.querySelectorAll("#form-tags input:checked").forEach(cb => tags.push(cb.value));
     const ingredients = []; document.querySelectorAll("#ingredients-container .ingredient-item").forEach(row => {
@@ -377,66 +413,71 @@ async function handleSaveRecipe() {
     });
 
     const recipeData = {
-        id: id || "rec_" + Date.now(), title: title, date: document.getElementById("form-date").value, category: document.getElementById("form-category").value, image: document.getElementById("form-image").value.trim(), tags: tags, ingredients: ingredients, equipment: document.getElementById("form-equipment").value,
+        id: id, title: title, date: document.getElementById("form-date").value, category: document.getElementById("form-category").value, image: document.getElementById("form-image").value.trim(), tags: tags, ingredients: ingredients, equipment: document.getElementById("form-equipment").value,
         microwaveSettings: { power: document.getElementById("mw-power").value, time: document.getElementById("mw-time").value, isSegmented: document.getElementById("mw-segmented").checked, segments: document.getElementById("mw-segments").value, container: document.getElementById("mw-container").value, hasCover: document.getElementById("mw-cover").checked, hasVents: document.getElementById("mw-vents").checked },
         riceCookerSettings: { water: document.getElementById("rc-water").value, simmerTime: parseInt(document.getElementById("rc-simmer").value) || 0, steamCount: parseInt(document.getElementById("rc-steamcount").value) || 1, container: document.getElementById("rc-container").value, hasCover: document.getElementById("rc-cover").checked, preheat: document.getElementById("rc-preheat").checked },
         steps: steps, result: document.getElementById("form-result").value, totalTime: document.getElementById("form-totaltime").value, isRepeatable: document.getElementById("form-repeatable").checked, notes: document.getElementById("form-notes").value, nextAdjustment: document.getElementById("form-adjustment").value, ratings: { taste: parseInt(document.getElementById("rate-taste").value)||5, doneness: parseInt(document.getElementById("rate-doneness").value)||5, texture: parseInt(document.getElementById("rate-texture").value)||5, convenience: parseInt(document.getElementById("rate-convenience").value)||5 }
     };
 
-    if (id) { const idx = globalRecipes.findIndex(r => r.id === id); globalRecipes[idx] = recipeData; } else { globalRecipes.unshift(recipeData); }
+    const idx = globalRecipes.findIndex(r => r.id === id);
+    if (idx > -1) globalRecipes[idx] = recipeData; else globalRecipes.unshift(recipeData);
     
     isFormDirty = false; 
-    await saveRecipes(); 
+    saveRecipes(); 
     closeIdModal("recipe-modal"); 
-    alert("🎉 料理公式儲存成功！");
+    alert("🎉 料理實驗配方儲存成功！");
 }
 
-async function deleteRecipe(id) {
+function deleteRecipe(id) {
     if (!confirm("確定要刪除這筆紀錄嗎？")) return;
     globalRecipes = globalRecipes.filter(r => r.id !== id);
-    await saveRecipes(); alert("已成功刪除。");
+    saveRecipes(); alert("已成功刪除。");
 }
 
 function viewRecipeDetail(id) {
     const r = globalRecipes.find(recipe => recipe.id === id); if (!r) return;
     const body = document.getElementById("detail-body");
     let eqHTML = "";
-    if (r.equipment.includes("微波爐")) eqHTML += `<p><strong>微波設定：</strong>${r.microwaveSettings?.power || '未註記'} | ${r.microwaveSettings?.time || '未註記'} ${r.microwaveSettings?.isSegmented ? `(${r.microwaveSettings.segments})`:''}</p>`;
-    if (r.equipment.includes("電鍋")) eqHTML += `<p><strong>電鍋設定：</strong>外鍋 ${r.riceCookerSettings?.water || '未註記'} 水 | 跳起悶 ${r.riceCookerSettings?.simmerTime || 0} 分鐘</p>`;
+    if (r.equipment.includes("微波爐")) eqHTML += `<p><strong>微波設定：</strong>${r.microwaveSettings?.power || '未註記'} / ${r.microwaveSettings?.time || '未註記'} ${r.microwaveSettings?.isSegmented ? `(${r.microwaveSettings.segments})`:''}</p>`;
+    if (r.equipment.includes("電鍋")) eqHTML += `<p><strong>電鍋設定：</strong>外鍋水量 ${r.riceCookerSettings?.water || '未註記'} | 開關跳起悶 ${r.riceCookerSettings?.simmerTime || 0} 分鐘</p>`;
 
     body.innerHTML = `
-        <div class="detail-sec"><h3>🍳 ${escapeHTML(r.title)}</h3><p style="font-size:0.85rem;color:var(--text-muted);">${r.category} | ${r.date}</p></div>
-        <div class="detail-sec"><h4>🥕 實驗食材比例</h4><ul>${r.ingredients.map(i => `<li><strong>${escapeHTML(i.name)}</strong> - ${escapeHTML(i.amount)}</li>`).join("")}</ul></div>
-        <div class="detail-sec"><h4>⚡ 核心加熱設定</h4>${eqHTML}</div>
-        <div class="detail-sec"><h4>📝 料理操作步驟</h4><ol style="padding-left:20px;">${r.steps.map(s => `<li>[${s.equip}] ${escapeHTML(s.desc)}</li>`).join("")}</ol></div>
-        <div class="detail-sec" style="background-color:var(--light-yellow);"><h4>🧪 下次調整公式建議</h4><p style="color:#A17A16;">${escapeHTML(r.nextAdjustment || "完美黃金比例，保持現狀！")}</p></div>
+        <div class="detail-sec"><h3>🍳 ${escapeHTML(r.title)}</h3><p style="font-size:0.85rem;color:var(--text-muted);">${r.category} | 日期：${r.date}</p></div>
+        <div class="detail-sec"><h4>🥕 實驗食材比例</h4><ul>${r.ingredients.map(i => `<li><strong>${escapeHTML(i.name)}</strong> - ${escapeHTML(i.amount)} ${i.prep ? `(${escapeHTML(i.prep)})`:''}</li>`).join("")}</ul></div>
+        <div class="detail-sec"><h4>⚡ 核心加熱公式參數</h4>${eqHTML}</div>
+        <div class="detail-sec"><h4>📝 料理操作步驟手記</h4><ol style="padding-left:20px;">${r.steps.map(s => `<li>[${s.equip}] ${escapeHTML(s.desc)}</li>`).join("")}</ol></div>
+        <div class="detail-sec" style="background-color:var(--light-yellow);"><h4>🧪 成果回饋與優化調整</h4><p style="color:#A17A16;"><strong>下次調整方向：</strong>${escapeHTML(r.nextAdjustment || "完美黃金比例，保持現狀！")}</p></div>
     `;
-    document.getElementById("detail-retry-btn").onclick = () => { closeIdModal("detail-modal"); openRecipeModal(); document.getElementById("form-title").value = r.title + " (再次實驗)"; };
+    document.getElementById("detail-retry-btn").onclick = () => { 
+        closeIdModal("detail-modal"); 
+        openRecipeModal(); 
+        document.getElementById("form-title").value = r.title + " (再次實驗挑戰)";
+    };
     document.getElementById("detail-modal").classList.remove("hidden");
 }
 
 // ==========================================
-// 7. JSON 備份與管理功能
+// 8. 檔案備份與管理功能
 // ==========================================
 function openDataMgrModal() { document.getElementById("mgr-count").innerText = globalRecipes.length; document.getElementById("data-mgr-modal").classList.remove("hidden"); }
-function exportData() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(globalRecipes, null, 2)); const a = document.createElement('a'); a.setAttribute("href", dataStr); a.setAttribute("download", `免開伙大廚_備份.json`); a.click(); }
+function exportData() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(globalRecipes, null, 2)); const a = document.createElement('a'); a.setAttribute("href", dataStr); a.setAttribute("download", `免開伙大廚_料理公式備份.json`); a.click(); }
 function importData(e) {
     const file = e.target.files[0]; if (!file) return;
-    const r = new FileReader(); r.onload = async function(evt) {
+    const r = new FileReader(); r.onload = function(evt) {
         try {
             const imported = JSON.parse(evt.target.result);
-            globalRecipes = confirm("【按確定】將與原資料合併；【按取消】將覆蓋清除舊資料。") ? [...globalRecipes, ...imported] : imported;
-            await saveRecipes(); closeIdModal("data-mgr-modal"); alert("🎉 資料匯入成功！");
-        } catch(err) { alert("檔案解析失敗"); }
+            globalRecipes = confirm("【確定】：與現有資料合併\n【取消】：完全覆蓋清除舊資料") ? [...globalRecipes, ...imported] : imported;
+            saveRecipes(); closeIdModal("data-mgr-modal"); alert("🎉 資料成功導入！");
+        } catch(err) { alert("檔案格式不符，導入失敗"); }
     }; r.readAsText(file);
 }
 
 function clearAllData() {
-    if (confirm("🚨 警告：確定要清空所有紀錄嗎？不可還原！")) {
+    if (confirm("🚨 確定要清空目前系統內所有的料理公式嗎？")) {
         localStorage.removeItem("nocook_chef_recipes");
-        globalRecipes = []; saveRecipes(); closeIdModal("data-mgr-modal"); alert("已清空。");
+        globalRecipes = []; saveRecipes(); closeIdModal("data-mgr-modal"); alert("已成功清空。");
     }
 }
 
-function closeIdModal(modalId) { if (modalId === "recipe-modal" && isFormDirty && !confirm("表單未儲存，確定關閉？")) return; document.getElementById(modalId).classList.add("hidden"); if(modalId === "recipe-modal") isFormDirty = false; }
+function closeIdModal(modalId) { if (modalId === "recipe-modal" && isFormDirty && !confirm("表單內容尚未儲存，確定要離開嗎？")) return; document.getElementById(modalId).classList.add("hidden"); if(modalId === "recipe-modal") isFormDirty = false; }
 function escapeHTML(str) { if (!str) return ""; return str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t)); }
