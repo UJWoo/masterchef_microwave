@@ -242,6 +242,29 @@ body {
 .empty-state { text-align: center; padding: 40px; background: var(--card-bg); border-radius: var(--radius-lg); border: 1px dashed var(--border-color); color: var(--text-muted); }
 .hidden { display: none !important; }
 
+.calculator-box {
+    background-color: var(--light-yellow);
+    border: 1px solid #E6D594;
+    border-radius: var(--radius-md);
+    padding: 15px;
+    margin: 15px 0;
+}
+.calc-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+.calc-result-display {
+    background-color: var(--card-bg);
+    border: 2px solid var(--sage-green);
+    color: var(--text-dark);
+    font-weight: bold;
+    padding: 8px;
+    border-radius: var(--radius-md);
+    text-align: center;
+    font-size: 1.05rem;
+}
+
 /* 彈窗樣式 (Modal) */
 .modal {
     position: fixed;
