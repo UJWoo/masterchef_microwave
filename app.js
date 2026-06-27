@@ -1,5 +1,5 @@
 // ==========================================
-// 1. 全域變數與 4 筆大廚黃金黃金公式
+// 1. 全域變數與 4 筆大廚黃金公式
 // ==========================================
 let globalRecipes = [];
 let isFormDirty = false;
@@ -103,12 +103,11 @@ function initDOMEvents() {
 }
 
 // ==========================================
-// 3. 📲 萬用手帳密碼本代碼同步核心邏輯
+// 3. 📲 萬用手帳密碼本代碼同步核心邏輯 (已加入去重功能)
 // ==========================================
 function generateSyncCode() {
     if (globalRecipes.length === 0) return alert("目前沒有資料可以生成唷！");
     try {
-        // 將資料物件轉成字串，並進行 Base64 編碼，防止亂碼且方便複製
         const jsonStr = JSON.stringify(globalRecipes);
         const base64Code = btoa(encodeURIComponent(jsonStr));
         
@@ -129,21 +128,40 @@ function loadSyncCode() {
     const code = document.getElementById("txt-import-code").value.trim();
     if (!code) return alert("請先貼上從其他裝置複製過來的長串代碼！");
     
-    if (confirm("這項操作將會完全覆蓋此裝置上的現有紀錄，確定要同步載入嗎？")) {
-        try {
-            const jsonStr = decodeURIComponent(atob(code));
-            const parsedData = JSON.parse(jsonStr);
+    const strategy = confirm("偵測到同步代碼！請選擇導入方式：\n\n【按確定】：與現有資料「合併」（會自動刪除重複料理）。\n【按取消】：將「完全覆蓋」並清除這台裝置目前的舊紀錄。");
+    
+    try {
+        const jsonStr = decodeURIComponent(atob(code));
+        const parsedData = JSON.parse(jsonStr);
+        
+        if (!Array.isArray(parsedData)) throw new Error("無效的資料結構");
+        
+        if (strategy) {
+            // 合併並自動去重（以料理名稱 title 為基準）
+            let skipCount = 0;
+            let addCount = 0;
             
-            if (!Array.isArray(parsedData)) throw new Error("無效的資料結構");
-            
+            parsedData.forEach(importedItem => {
+                const isDuplicate = globalRecipes.some(existingItem => existingItem.title.trim() === importedItem.title.trim());
+                if (isDuplicate) {
+                    skipCount++;
+                } else {
+                    globalRecipes.push(importedItem);
+                    addCount++;
+                }
+            });
+            alert(`⚡ 同步完成！\n成功合併了 ${addCount} 筆新料理公式，並自動過濾跳過了 ${skipCount} 筆重複的項目。`);
+        } else {
+            // 完全覆蓋
             globalRecipes = parsedData;
-            saveRecipes();
-            document.getElementById("txt-import-code").value = "";
-            closeIdModal("data-mgr-modal");
-            alert("⚡ 萬用同步成功！整本手帳紀錄已完美複製到這台裝置。");
-        } catch (err) {
-            alert("❌ 載入失敗！代碼可能不完整或格式有誤，請確認是否完整複製。");
+            alert("⚡ 同步完成！已完全覆蓋並更新此裝置的整本手帳紀錄。");
         }
+        
+        saveRecipes();
+        document.getElementById("txt-import-code").value = "";
+        closeIdModal("data-mgr-modal");
+    } catch (err) {
+        alert("❌ 載入失敗！代碼可能不完整或格式有誤，請確認是否完整複製。");
     }
 }
 
@@ -457,19 +475,49 @@ function viewRecipeDetail(id) {
 }
 
 // ==========================================
-// 8. 檔案備份與管理功能
+// 8. 檔案備份與管理功能 (已加入去重功能)
 // ==========================================
 function openDataMgrModal() { document.getElementById("mgr-count").innerText = globalRecipes.length; document.getElementById("data-mgr-modal").classList.remove("hidden"); }
 function exportData() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(globalRecipes, null, 2)); const a = document.createElement('a'); a.setAttribute("href", dataStr); a.setAttribute("download", `免開伙大廚_料理公式備份.json`); a.click(); }
+
 function importData(e) {
     const file = e.target.files[0]; if (!file) return;
-    const r = new FileReader(); r.onload = function(evt) {
+    const r = new FileReader(); 
+    r.onload = function(evt) {
         try {
             const imported = JSON.parse(evt.target.result);
-            globalRecipes = confirm("【確定】：與現有資料合併\n【取消】：完全覆蓋清除舊資料") ? [...globalRecipes, ...imported] : imported;
-            saveRecipes(); closeIdModal("data-mgr-modal"); alert("🎉 資料成功導入！");
-        } catch(err) { alert("檔案格式不符，導入失敗"); }
-    }; r.readAsText(file);
+            if (!Array.isArray(imported)) throw new Error("結構錯誤");
+
+            const strategy = confirm("偵測到備份檔案！請選擇導入方式：\n\n【按確定】：與現有資料「合併」（會自動過濾重複料理）。\n【按取消】：將「完全覆蓋」並清除目前所有的舊紀錄。");
+            
+            if (strategy) {
+                // 合併並自動去重（以料理名稱 title 為基準）
+                let skipCount = 0;
+                let addCount = 0;
+                
+                imported.forEach(importedItem => {
+                    const isDuplicate = globalRecipes.some(existingItem => existingItem.title.trim() === importedItem.title.trim());
+                    if (isDuplicate) {
+                        skipCount++;
+                    } else {
+                        globalRecipes.push(importedItem);
+                        addCount++;
+                    }
+                });
+                alert(`📥 檔案匯入成功！\n成功合併了 ${addCount} 筆新料理，並自動過濾跳過了 ${skipCount} 筆重複的項目。`);
+            } else {
+                // 完全覆蓋
+                globalRecipes = imported;
+                alert("📥 檔案匯入成功！已完全覆蓋現有手帳。");
+            }
+            
+            saveRecipes(); 
+            closeIdModal("data-mgr-modal"); 
+        } catch(err) { 
+            alert("檔案格式不符，導入失敗"); 
+        }
+    }; 
+    r.readAsText(file);
 }
 
 function clearAllData() {
