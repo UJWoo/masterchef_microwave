@@ -1,13 +1,12 @@
 // ==========================================
-// 1. 初始化 Supabase 用戶端設定
+// 1. 初始化 Supabase 用戶端設定（已暫時關閉雲端，改為純本地 MVP 模式）
 // ==========================================
-const SUPABASE_URL = window.SUPABASE_URL || "https://your-project-id.supabase.co";
-const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "your-anon-key";
+let supabase = null; // 強迫腳本跳過雲端初始化，直接走 LocalStorage
 
-let supabase = null;
-if (SUPABASE_URL.indexOf("your-project-id") === -1) {
-    supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
+// 全域狀態管理變數
+let globalRecipes = [];
+let currentUser = null;
+... (後面程式碼完全不動)
 
 // 全域狀態管理變數
 let globalRecipes = [];
