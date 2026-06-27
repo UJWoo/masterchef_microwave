@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>免開伙大廚 - 你的微波爐與電鍋料理實驗室</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <header class="navbar">
@@ -15,8 +14,7 @@
                 <p class="slogan">「不用顧爐火，也能好好吃飯。」</p>
             </div>
             <div class="auth-panel">
-                <span id="user-status">載入中...</span>
-                <button id="auth-btn" class="btn btn-secondary">登入 / 註冊</button>
+                <span id="user-status">📝 本地手帳模式 (免帳號)</span>
             </div>
         </div>
     </header>
@@ -45,11 +43,11 @@
 
             <div class="action-bar">
                 <button id="open-add-modal-btn" class="btn btn-primary">➕ 新增料理紀錄</button>
-                <button id="open-data-mgr-btn" class="btn btn-text">⚙️ 資料與雲端管理</button>
+                <button id="open-data-mgr-btn" class="btn btn-text">📲 跨裝置同步與備份</button>
             </div>
 
             <div class="filter-search-container">
-                <input type="text" id="search-input" placeholder="🔍 搜尋料理、食材、標籤或備註...">
+                <input type="text" id="search-input" placeholder="🔍 搜尋料理、食材、標籤或備忘建議...">
                 <div class="filter-tags" id="quick-filters">
                     <button class="filter-btn active" data-filter="all">全部</button>
                     <button class="filter-btn" data-filter="微波爐">微波爐</button>
@@ -74,7 +72,7 @@
                     <h3>🛒 本週免開伙採買便條紙</h3>
                     <button class="btn btn-danger btn-sm" id="clear-cart-btn">清空清單</button>
                 </div>
-                <p class="calc-hint">點擊上方料理卡片上的「🛒 放入採買」，系統會自動將食材拉到這裡。去超市時用手機點擊可直接劃線勾選唷！</p>
+                <p class="calc-hint">點擊料理卡片上的「🛒 採買」，食材會自動整理至此，去超市時可用手機點擊直接劃線勾選！</p>
                 <ul id="shopping-list-container" class="shopping-list">
                     <li class="cart-empty">目前採買便條紙還是空的，快去挑選想挑戰的料理吧！</li>
                 </ul>
@@ -92,10 +90,10 @@
                 <input type="hidden" id="form-recipe-id">
 
                 <details open class="form-section">
-                    <summary>📋 基本資料 (點擊展開/收合)</summary>
+                    <summary>📋 基本資料</summary>
                     <div class="form-group">
                         <label for="form-title">料理名稱 <span class="required">*</span></label>
-                        <input type="text" id="form-title" required placeholder="例如：超完美微波蒸蛋">
+                        <input type="text" id="form-title" required placeholder="例如：黃金比例微波蒸蛋">
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -128,18 +126,18 @@
                     </div>
                     <div class="form-group">
                         <label for="form-image">料理照片網址 (選填)</label>
-                        <input type="url" id="form-image" placeholder="請輸入圖片網址（亦可留空使用手帳預設圖）">
+                        <input type="url" id="form-image" placeholder="請輸入圖片網址（留空則使用手帳風預設圖）">
                     </div>
                 </details>
 
                 <details open class="form-section">
-                    <summary>🥕 食材資訊</summary>
+                    <summary>🥕 食材比例資訊</summary>
                     <div id="ingredients-container"></div>
                     <button type="button" class="btn btn-secondary btn-sm" id="add-ingredient-btn">➕ 新增食材</button>
                 </details>
 
                 <details open class="form-section">
-                    <summary>⚡ 料理設備與加熱設定</summary>
+                    <summary>⚡ 料理設備與核心加熱設定</summary>
                     <div class="form-group">
                         <label for="form-equipment">主要設備 <span class="required">*</span></label>
                         <select id="form-equipment" required>
@@ -152,14 +150,14 @@
 
                     <div class="calculator-box">
                         <h4>🧮 萬用微波爐功率換算助手</h4>
-                        <p class="calc-hint">看到網路食譜的瓦數跟家裡不同？在這裡換算好之後再填入公式吧！</p>
+                        <p class="calc-hint">看到網路食譜的瓦數跟家裡不同？一鍵幫您神還原精準時間！</p>
                         <div class="form-row">
                             <div class="form-group">
-                                <label>網頁食譜瓦數 (W)</label>
+                                <label>網路食譜瓦數 (W)</label>
                                 <input type="number" id="calc-recipe-w" value="700">
                             </div>
                             <div class="form-group">
-                                <label>食譜加熱時間</label>
+                                <label>食譜標示時間</label>
                                 <div style="display: flex; gap: 5px;">
                                     <input type="number" id="calc-recipe-m" value="3" style="width:70px;"> <span style="align-self:center;">分</span>
                                     <input type="number" id="calc-recipe-s" value="0" style="width:70px;"> <span style="align-self:center;">秒</span>
@@ -172,21 +170,21 @@
                                 <input type="number" id="calc-home-w" value="600">
                             </div>
                             <div class="form-group">
-                                <label>💡 換算成我家時間應設為</label>
+                                <label>💡 換算成我家時間應設定</label>
                                 <div id="calc-result" class="calc-result-display">3 分 30 秒</div>
                             </div>
                         </div>
                     </div>
 
                     <div id="microwave-panel" class="equipment-sub-panel">
-                        <h4>💡 微波爐設定面板</h4>
+                        <h4>💡 微波爐參數設定</h4>
                         <div class="form-row">
-                            <div class="form-group"><label>功率 (W)</label><input type="text" id="mw-power" placeholder="例如：600W"></div>
+                            <div class="form-group"><label>微波爐功率 (W)</label><input type="text" id="mw-power" placeholder="例如：600W"></div>
                             <div class="form-group"><label>加熱時間</label><input type="text" id="mw-time" placeholder="例如：3分30秒"></div>
                         </div>
                         <div class="form-group">
                             <label><input type="checkbox" id="mw-segmented"> 是否分段加熱</label>
-                            <input type="text" id="mw-segments" placeholder="分段說明，例如：先高火2分->翻面->再中火1分" class="hidden">
+                            <input type="text" id="mw-segments" placeholder="例如：第一段高火2分 -> 攪拌 -> 第二段中火1分" class="hidden">
                         </div>
                         <div class="form-row">
                             <div class="form-group"><label>使用容器</label><input type="text" id="mw-container" placeholder="例如：耐熱玻璃盒"></div>
@@ -198,18 +196,18 @@
                     </div>
 
                     <div id="ricecooker-panel" class="equipment-sub-panel hidden">
-                        <h4>🍲 電鍋設定面板</h4>
+                        <h4>🍲 電鍋參數設定</h4>
                         <div class="form-row">
                             <div class="form-group"><label>外鍋水量</label><input type="text" id="rc-water" placeholder="例如：1.5杯 / 200ml"></div>
-                            <div class="form-group"><label>開關跳起後燜幾分鐘</label><input type="number" id="rc-simmer" placeholder="例如：10"></div>
+                            <div class="form-group"><label>開關跳起後燜多久 (分鐘)</label><input type="number" id="rc-simmer" placeholder="例如：10"></div>
                         </div>
                         <div class="form-row">
                             <div class="form-group"><label>蒸煮次數</label><input type="number" id="rc-steamcount" value="1"></div>
-                            <div class="form-group"><label>內鍋與架高容器</label><input type="text" id="rc-container" placeholder="例如：不鏽鋼內鍋+高蒸架"></div>
+                            <div class="form-group"><label>內鍋容器與架高方式</label><input type="text" id="rc-container" placeholder="例如：不鏽鋼內鍋+高蒸架"></div>
                         </div>
                         <div class="form-group">
                             <label><input type="checkbox" id="rc-cover"> 內鍋是否加蓋</label>
-                            <label><input type="checkbox" id="rc-preheat"> 是否需要外鍋先預熱</label>
+                            <label><input type="checkbox" id="rc-preheat"> 外鍋是否先預熱</label>
                         </div>
                     </div>
                 </details>
@@ -221,7 +219,7 @@
                 </details>
 
                 <details open class="form-section">
-                    <summary>🧪 實驗結果紀錄</summary>
+                    <summary>🧪 實驗結果紀錄與成果評分</summary>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="form-result">結果評價 <span class="required">*</span></label>
@@ -235,7 +233,7 @@
                         </div>
                         <div class="form-group">
                             <label for="form-totaltime">總料理時間</label>
-                            <input type="text" id="form-totaltime" placeholder="例如：8分鐘">
+                            <input type="text" id="form-totaltime" placeholder="example: 8分鐘">
                         </div>
                     </div>
                     <div class="rating-grid">
@@ -249,11 +247,11 @@
                     </div>
                     <div class="form-group">
                         <label for="form-notes">本次心得 / 成功或失敗原因</label>
-                        <textarea id="form-notes" rows="2" placeholder="詳細記下本次加熱產生的變化..."></textarea>
+                        <textarea id="form-notes" rows="2" placeholder="詳細記下本次加熱產生的物理或味道變化..."></textarea>
                     </div>
                     <div class="form-group">
                         <label for="form-adjustment">下次調整建議公式</label>
-                        <textarea id="form-adjustment" rows="2" placeholder="例如：下次微波可減少30秒，或外鍋多加半杯水。"></textarea>
+                        <textarea id="form-adjustment" rows="2" placeholder="例如：下次微波可減少30秒，避免過熟。"></textarea>
                     </div>
                 </details>
 
@@ -268,13 +266,12 @@
     <div id="detail-modal" class="modal hidden">
         <div class="modal-content notebook-style">
             <div class="modal-header">
-                <h2 id="detail-title">料理實驗詳情</h2>
+                <h2 id="detail-title">料理公式詳情手帳</h2>
                 <button class="close-btn" id="close-detail-modal">&times;</button>
             </div>
-            <div id="detail-body">
-                </div>
+            <div id="detail-body"></div>
             <div class="modal-footer">
-                <button id="detail-retry-btn" class="btn btn-primary">🔥 再次挑戰這道料理 (複製基礎公式)</button>
+                <button id="detail-retry-btn" class="btn btn-primary">🔥 再次挑戰這道料理 (複製基礎配方)</button>
                 <button id="detail-close-btn" class="btn btn-secondary">關閉</button>
             </div>
         </div>
@@ -283,49 +280,36 @@
     <div id="data-mgr-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>⚙️ 資料與雲端帳號管理中心</h2>
+                <h2>📲 跨裝置同步與資料管理</h2>
                 <button class="close-btn" id="close-data-modal">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="mgr-section cloud-sync-box">
-                    <h3>☁️ Supabase 跨裝置雲端同步</h3>
-                    <p id="cloud-info">請先登入，即可啟用跨裝置即時同步功能。</p>
-                    <div id="cloud-actions" class="hidden">
-                        <button id="migrate-btn" class="btn btn-primary">🚀 將本機 LocalStorage 資料搬移至雲端</button>
+                <div class="mgr-section" style="background: #f1f8e9; border-radius: 8px; padding: 15px; border: 1px dashed #c5e1a5;">
+                    <h3>✨ 萬用手帳代碼同步 (免後端帳號)</h3>
+                    <p class="calc-hint" style="margin-bottom: 10px;">點擊下方「生成並複製」，可將目前整本食譜公式打包成文字密碼，複製傳到手機貼上，即可一秒跨裝置同步！</p>
+                    <button id="btn-copy-code" class="btn btn-primary" style="width: 100%; margin-bottom: 12px;">📋 生成並複製目前整本手帳代碼</button>
+                    
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label>📥 在此裝置貼上其他地方複製的代碼：</label>
+                        <textarea id="txt-import-code" rows="3" placeholder="請將在其他裝置複製的長串代碼貼在這裡..."></textarea>
                     </div>
+                    <button id="btn-paste-code" class="btn btn-secondary" style="width: 100%;">⚡ 載入代碼，同步這台裝置</button>
                 </div>
-                <hr>
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border-color);">
                 <div class="mgr-section">
-                    <h3>📦 本地 JSON 資料備份</h3>
-                    <p>目前系統內共有 <strong id="mgr-count">0</strong> 筆料理紀錄。</p>
-                    <div class="btn-group">
-                        <button id="export-btn" class="btn btn-secondary">📥 匯出所有紀錄 (.json)</button>
-                        <label for="import-file" class="btn btn-secondary-label">📤 匯入紀錄檔案</label>
+                    <h3>📦 檔案備份</h3>
+                    <p>目前手帳共有 <strong id="mgr-count">0</strong> 筆實驗紀錄。</p>
+                    <div class="btn-group" style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button id="export-btn" class="btn btn-secondary">📥 匯出為 .json 檔案</button>
+                        <label for="import-file" class="btn btn-secondary-label">📤 匯入備份檔案</label>
                         <input type="file" id="import-file" accept=".json" style="display:none;">
                     </div>
                 </div>
-                <hr>
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border-color);">
                 <div class="mgr-section danger-zone">
-                    <h3>⚠️ 危險區域</h3>
-                    <button id="clear-all-btn" class="btn btn-danger">💥 清空所有資料庫紀錄</button>
+                    <h3>⚠️ 危險清理區域</h3>
+                    <button id="clear-all-btn" class="btn btn-danger" style="width: 100%;">💥 清空目前所有料理紀錄</button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="auth-modal" class="modal hidden">
-        <div class="modal-content sm-modal">
-            <div class="modal-header">
-                <h2>📧 免密碼信箱登入</h2>
-                <button class="close-btn" id="close-auth-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">輸入您的 Email，系統將發送免密碼登入連結至您的信箱，點擊即可登入同步！</p>
-                <div class="form-group">
-                    <label for="auth-email">電子郵件信箱</label>
-                    <input type="email" id="auth-email" placeholder="example@mail.com" required>
-                </div>
-                <button id="send-magic-link-btn" class="btn btn-primary" style="width:100%; margin-top:10px;">發送登入連結</button>
             </div>
         </div>
     </div>
@@ -333,5 +317,7 @@
     <footer class="footer">
         <p>© 2026 免開伙大廚實驗室 - 不用顧爐火，也能好好吃飯。</p>
     </footer>
+
+    <script src="app.js"></script>
 </body>
 </html>
