@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>免開伙大廚 - 你的微波爐與電鍋料理實驗室</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="brand">
+                <h1>🍳 免開伙大廚</h1>
+                <p class="slogan">「不用顧爐火，也能好好吃飯。」</p>
+            </div>
+            <div class="auth-panel">
+                <span id="user-status">載入中...</span>
+                <button id="auth-btn" class="btn btn-secondary">登入 / 註冊</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <section class="dashboard-section">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-icon">📚</span>
+                    <div class="stat-info"><h3 id="stat-total">0</h3><p>總實驗紀錄</p></div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">🎉</span>
+                    <div class="stat-info"><h3 id="stat-success">0</h3><p>大成功/成功</p></div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">⚡</span>
+                    <div class="stat-info"><h3 id="stat-device">無</h3><p>最常使用設備</p></div>
+                </div>
+            </div>
+
+            <div id="random-recommend-box" class="recommend-box hidden">
+                <h3>💡 今日料理靈感推薦</h3>
+                <div id="recommend-content"></div>
+            </div>
+
+            <div class="action-bar">
+                <button id="open-add-modal-btn" class="btn btn-primary">➕ 新增料理紀錄</button>
+                <button id="open-data-mgr-btn" class="btn btn-text">⚙️ 資料與雲端管理</button>
+            </div>
+
+            <div class="filter-search-container">
+                <input type="text" id="search-input" placeholder="🔍 搜尋料理、食材、標籤或備註...">
+                <div class="filter-tags" id="quick-filters">
+                    <button class="filter-btn active" data-filter="all">全部</button>
+                    <button class="filter-btn" data-filter="微波爐">微波爐</button>
+                    <button class="filter-btn" data-filter="電鍋">電鍋</button>
+                    <button class="filter-btn" data-filter="微波爐＋電鍋">微波爐＋電鍋</button>
+                    <button class="filter-btn" data-filter="成功">成功等級</button>
+                    <button class="filter-btn" data-filter="待改進">待改進/失敗</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="recipes-section">
+            <div id="empty-state" class="empty-state">
+                <p>你的免開火料理實驗室還是空的，先記下第一道料理吧！</p>
+            </div>
+            <div id="recipes-grid" class="recipes-grid"></div>
+        </section>
+    </main>
+
+    <div id="recipe-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">新增料理實驗紀錄</h2>
+                <button class="close-btn" id="close-recipe-modal">&times;</button>
+            </div>
+            <form id="recipe-form" onsubmit="return false;">
+                <input type="hidden" id="form-recipe-id">
+
+                <details open class="form-section">
+                    <summary>📋 基本資料 (點擊展開/收合)</summary>
+                    <div class="form-group">
+                        <label for="form-title">料理名稱 <span class="required">*</span></label>
+                        <input type="text" id="form-title" required placeholder="例如：超完美微波蒸蛋">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="form-date">料理日期</label>
+                            <input type="date" id="form-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="form-category">料理分類</label>
+                            <select id="form-category">
+                                <option value="主食">主食</option>
+                                <option value="配菜">配菜</option>
+                                <option value="湯品">湯品</option>
+                                <option value="早餐">早餐</option>
+                                <option value="點心">點心</option>
+                                <option value="宵夜">宵夜</option>
+                                <option value="其他">其他</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>自訂標籤 (可複選)</label>
+                        <div class="checkbox-group" id="form-tags">
+                            <label><input type="checkbox" value="快速料理"> 快速料理</label>
+                            <label><input type="checkbox" value="高蛋白"> 高蛋白</label>
+                            <label><input type="checkbox" value="清冰箱"> 清冰箱</label>
+                            <label><input type="checkbox" value="一人份"> 一人份</label>
+                            <label><input type="checkbox" value="低油"> 低油</label>
+                            <label><input type="checkbox" value="便當菜"> 便當菜</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="form-image">料理照片網址 (選填)</label>
+                        <input type="url" id="form-image" placeholder="請輸入圖片網址（亦可留空使用手帳預設圖）">
+                    </div>
+                </details>
+
+                <details open class="form-section">
+                    <summary>🥕 食材資訊</summary>
+                    <div id="ingredients-container"></div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="add-ingredient-btn">➕ 新增食材</button>
+                </details>
+
+                <details open class="form-section">
+                    <summary>⚡ 料理設備與加熱設定</summary>
+                    <div class="form-group">
+                        <label for="form-equipment">主要設備 <span class="required">*</span></label>
+                        <select id="form-equipment" required>
+                            <option value="微波爐">微波爐</option>
+                            <option value="電鍋">電鍋</option>
+                            <option value="微波爐＋電鍋">微波爐＋電鍋</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+
+                    <div id="microwave-panel" class="equipment-sub-panel">
+                        <h4>💡 微波爐設定面板</h4>
+                        <div class="form-row">
+                            <div class="form-group"><label>功率 (W)</label><input type="text" id="mw-power" placeholder="例如：700W"></div>
+                            <div class="form-group"><label>加熱時間</label><input type="text" id="mw-time" placeholder="例如：3分鐘"></div>
+                        </div>
+                        <div class="form-group">
+                            <label><input type="checkbox" id="mw-segmented"> 是否分段加熱</label>
+                            <input type="text" id="mw-segments" placeholder="分段說明，例如：先高火2分->翻面->再中火1分" class="hidden">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>使用容器</label><input type="text" id="mw-container" placeholder="例如：耐熱玻璃盒"></div>
+                            <div class="form-group" style="flex-direction:row; gap:15px; align-items:center; margin-top:25px;">
+                                <label><input type="checkbox" id="mw-cover"> 是否加蓋</label>
+                                <label><input type="checkbox" id="mw-vents"> 是否留透氣孔</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="ricecooker-panel" class="equipment-sub-panel hidden">
+                        <h4>🍲 電鍋設定面板</h4>
+                        <div class="form-row">
+                            <div class="form-group"><label>外鍋水量</label><input type="text" id="rc-water" placeholder="例如：1.5杯 / 200ml"></div>
+                            <div class="form-group"><label>燜蒸時間 (分鐘)</label><input type="number" id="rc-simmer" placeholder="跳起後燜多久"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>蒸煮次數</label><input type="number" id="rc-steamcount" value="1"></div>
+                            <div class="form-group"><label>內鍋容器</label><input type="text" id="rc-container" placeholder="例如：不鏽鋼內鍋+蒸架"></div>
+                        </div>
+                        <div class="form-group">
+                            <label><input type="checkbox" id="rc-cover"> 內鍋是否加蓋</label>
+                            <label><input type="checkbox" id="rc-preheat"> 是否需要外鍋先預熱</label>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="form-section">
+                    <summary>📝 料理實驗步驟</summary>
+                    <div id="steps-container"></div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="add-step-btn">➕ 新增步驟</button>
+                </details>
+
+                <details open class="form-section">
+                    <summary>🧪 實驗結果紀錄</summary>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="form-result">結果評價 <span class="required">*</span></label>
+                            <select id="form-result" required>
+                                <option value="大成功">🌟 大成功</option>
+                                <option value="成功">✅ 成功</option>
+                                <option value="普通">😐 普通</option>
+                                <option value="待改進">⚠️ 待改進</option>
+                                <option value="失敗">❌ 失敗</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="form-totaltime">總料理時間</label>
+                            <input type="text" id="form-totaltime" placeholder="例如：8分鐘">
+                        </div>
+                    </div>
+                    <div class="rating-grid">
+                        <div class="form-group"><label>味道評分 (1-5)</label><input type="number" id="rate-taste" min="1" max="5" value="5"></div>
+                        <div class="form-group"><label>熟度評分 (1-5)</label><input type="number" id="rate-doneness" min="1" max="5" value="5"></div>
+                        <div class="form-group"><label>口感評分 (1-5)</label><input type="number" id="rate-texture" min="1" max="5" value="5"></div>
+                        <div class="form-group"><label>方便程度 (1-5)</label><input type="number" id="rate-convenience" min="1" max="5" value="5"></div>
+                    </div>
+                    <div class="form-group">
+                        <label><input type="checkbox" id="form-repeatable" checked> 未來是否願意再次製作</label>
+                    </div>
+                    <div class="form-group">
+                        <label for="form-notes">本次心得 / 成功或失敗原因</label>
+                        <textarea id="form-notes" rows="2" placeholder="詳細記下本次加熱產生的變化..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="form-adjustment">下次調整建議公式</label>
+                        <textarea id="form-adjustment" rows="2" placeholder="例如：下次微波可減少30秒，或外鍋多加半杯水。"></textarea>
+                    </div>
+                </details>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-recipe-btn">取消</button>
+                    <button type="button" class="btn btn-primary" id="save-recipe-btn">儲存紀錄</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="detail-modal" class="modal hidden">
+        <div class="modal-content notebook-style">
+            <div class="modal-header">
+                <h2 id="detail-title">料理實驗詳情</h2>
+                <button class="close-btn" id="close-detail-modal">&times;</button>
+            </div>
+            <div id="detail-body">
+                </div>
+            <div class="modal-footer">
+                <button id="detail-retry-btn" class="btn btn-primary">🔥 再次挑戰這道料理 (複製基礎公式)</button>
+                <button id="detail-close-btn" class="btn btn-secondary">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="data-mgr-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ 資料與雲端帳號管理中心</h2>
+                <button class="close-btn" id="close-data-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="mgr-section cloud-sync-box">
+                    <h3>☁️ Supabase 跨裝置雲端同步</h3>
+                    <p id="cloud-info">請先登入，即可啟用跨裝置即時同步功能。</p>
+                    <div id="cloud-actions" class="hidden">
+                        <button id="migrate-btn" class="btn btn-primary">🚀 將本機 LocalStorage 資料搬移至雲端</button>
+                    </div>
+                </div>
+                <hr>
+                <div class="mgr-section">
+                    <h3>📦 本地 JSON 資料備份</h3>
+                    <p>目前系統內共有 <strong id="mgr-count">0</strong> 筆料理紀錄。</p>
+                    <div class="btn-group">
+                        <button id="export-btn" class="btn btn-secondary">📥 匯出所有紀錄 (.json)</button>
+                        <label for="import-file" class="btn btn-secondary-label">📤 匯入紀錄檔案</label>
+                        <input type="file" id="import-file" accept=".json" style="display:none;">
+                    </div>
+                </div>
+                <hr>
+                <div class="mgr-section danger-zone">
+                    <h3>⚠️ 危險區域</h3>
+                    <button id="clear-all-btn" class="btn btn-danger">💥 清空所有資料庫紀錄</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="auth-modal" class="modal hidden">
+        <div class="modal-content sm-modal">
+            <div class="modal-header">
+                <h2>📧 免密碼信箱登入</h2>
+                <button class="close-btn" id="close-auth-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">輸入您的 Email，系統將發送免密碼登入連結 (Magic Link) 至您的信箱，點擊即可登入同步！</p>
+                <div class="form-group">
+                    <label for="auth-email">電子郵件信箱</label>
+                    <input type="email" id="auth-email" placeholder="example@mail.com" required>
+                </div>
+                <button id="send-magic-link-btn" class="btn btn-primary" style="width:100%; margin-top:10px;">發送登入連結</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>© 2026 免開伙大廚實驗室 - 不用顧爐火，也能好好吃飯。</p>
+    </footer>
+</body>
+</html>
