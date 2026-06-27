@@ -73,9 +73,12 @@ function initDOMEvents() {
     document.getElementById("calc-recipe-s").addEventListener("input", calculateMicrowaveTime);
     document.getElementById("calc-home-w").addEventListener("input", calculateMicrowaveTime);
 
-    // 📲 密碼本手動同步按鈕
+    // 📲 密碼本同步
     document.getElementById("btn-copy-code").addEventListener("click", generateSyncCode);
     document.getElementById("btn-paste-code").addEventListener("click", loadSyncCode);
+
+    // 📸 核心相機按鈕點擊事件：下載手帳字卡
+    document.getElementById("detail-export-img-btn").addEventListener("click", exportDetailToImage);
 
     // 🛒 採買清單清空
     document.getElementById("clear-cart-btn").addEventListener("click", () => {
@@ -103,7 +106,52 @@ function initDOMEvents() {
 }
 
 // ==========================================
-// 3. 📲 萬用手帳密碼本代碼同步核心邏輯 (已加入去重功能)
+// 3. 📸 核心拍照生成圖片功能 (html2canvas 實作)
+// ==========================================
+function exportDetailToImage() {
+    const captureArea = document.getElementById("capture-area");
+    const watermark = document.getElementById("capture-watermark");
+    const exportBtn = document.getElementById("detail-export-img-btn");
+    const titleText = document.querySelector("#detail-body h3") ? document.querySelector("#detail-body h3").innerText : "料理公式";
+
+    // 1. 拍照前置作業：暫時將按鈕鎖定，並把設計好的精美浮水印顯示出來
+    exportBtn.disabled = true;
+    exportBtn.innerText = "📸 字卡生成中...";
+    watermark.style.display = "block";
+
+    // 2. 呼叫 html2canvas 拍照鏡頭，優化高解析度設定
+    html2canvas(captureArea, {
+        backgroundColor: "#FCFAF2", // 保持復古文青手帳黃底色
+        scale: 2,                  // 放大 2 倍率，確保匯出的文字照片在手機上超級清晰、不模糊
+        useCORS: true,             // 允許跨網域載入外部圖片照片
+        logging: false
+    }).then(canvas => {
+        // 3. 將拍好的畫布轉化成圖片網址（PNG）
+        const imgData = canvas.toDataURL("image/png");
+
+        // 4. 自動建立虛擬下載錨點，觸發瀏覽器下載
+        const downloadLink = document.createElement("a");
+        downloadLink.href = imgData;
+        downloadLink.download = `免開伙大廚_${titleText.replace('🍳 ', '')}_加熱公式字卡.png`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        downloadLink.remove();
+
+        // 5. 拍照結束：還原網頁 UI 狀態
+        watermark.style.display = "none";
+        exportBtn.disabled = false;
+        exportBtn.innerText = "📸 匯出料理公式字卡 (圖片)";
+    }).catch(err => {
+        console.error("照片生成失敗:", err);
+        alert("字卡照片生成失敗，可能與特殊外掛或圖片網域有關。");
+        watermark.style.display = "none";
+        exportBtn.disabled = false;
+        exportBtn.innerText = "📸 匯出料理公式字卡 (圖片)";
+    });
+}
+
+// ==========================================
+// 4. 📲 萬用手帳密碼本代碼同步邏輯
 // ==========================================
 function generateSyncCode() {
     if (globalRecipes.length === 0) return alert("目前沒有資料可以生成唷！");
@@ -128,7 +176,7 @@ function loadSyncCode() {
     const code = document.getElementById("txt-import-code").value.trim();
     if (!code) return alert("請先貼上從其他裝置複製過來的長串代碼！");
     
-    const strategy = confirm("偵測到同步代碼！請選擇導入方式：\n\n【按確定】：與現有資料「合併」（會自動刪除重複料理）。\n【按取消】：將「完全覆蓋」並清除這台裝置目前的舊紀錄。");
+    const strategy = confirm("偵測到同步代碼！請選擇導入方式：\n\n【按確定】：與現有資料「合併」（會自動過濾重複料理）。\n【按取消】：將「完全覆蓋」並清除這台裝置目前的舊紀錄。");
     
     try {
         const jsonStr = decodeURIComponent(atob(code));
@@ -137,22 +185,13 @@ function loadSyncCode() {
         if (!Array.isArray(parsedData)) throw new Error("無效的資料結構");
         
         if (strategy) {
-            // 合併並自動去重（以料理名稱 title 為基準）
-            let skipCount = 0;
-            let addCount = 0;
-            
+            let skipCount = 0; let addCount = 0;
             parsedData.forEach(importedItem => {
                 const isDuplicate = globalRecipes.some(existingItem => existingItem.title.trim() === importedItem.title.trim());
-                if (isDuplicate) {
-                    skipCount++;
-                } else {
-                    globalRecipes.push(importedItem);
-                    addCount++;
-                }
+                if (isDuplicate) { skipCount++; } else { globalRecipes.push(importedItem); addCount++; }
             });
             alert(`⚡ 同步完成！\n成功合併了 ${addCount} 筆新料理公式，並自動過濾跳過了 ${skipCount} 筆重複的項目。`);
         } else {
-            // 完全覆蓋
             globalRecipes = parsedData;
             alert("⚡ 同步完成！已完全覆蓋並更新此裝置的整本手帳紀錄。");
         }
@@ -166,7 +205,7 @@ function loadSyncCode() {
 }
 
 // ==========================================
-// 4. 🧮 功率換算核心
+// 5. 🧮 功率換算核心
 // ==========================================
 function calculateMicrowaveTime() {
     const recipeW = parseFloat(document.getElementById("calc-recipe-w").value) || 0;
@@ -189,7 +228,7 @@ function calculateMicrowaveTime() {
 }
 
 // ==========================================
-// 5. 🛒 採買清單核心
+// 6. 🛒 採買清單核心
 // ==========================================
 function addRecipeIngredientsToCart(recipeId) {
     const recipe = globalRecipes.find(r => r.id === recipeId);
@@ -243,7 +282,7 @@ function removeCartItem(idx) {
 }
 
 // ==========================================
-// 6. 資料庫儲存與卡片渲染
+// 7. 資料庫儲存與卡片渲染
 // ==========================================
 function loadRecipes() {
     const localData = localStorage.getItem("nocook_chef_recipes");
@@ -331,7 +370,7 @@ function filterRecipes() {
 }
 
 // ==========================================
-// 7. 表單彈窗欄位增減處理
+// 8. 表單彈窗及編輯處理
 // ==========================================
 function openRecipeModal(recipeId = null) {
     isFormDirty = false;
@@ -475,7 +514,7 @@ function viewRecipeDetail(id) {
 }
 
 // ==========================================
-// 8. 檔案備份與管理功能 (已加入去重功能)
+// 9. 檔案備份與管理功能
 // ==========================================
 function openDataMgrModal() { document.getElementById("mgr-count").innerText = globalRecipes.length; document.getElementById("data-mgr-modal").classList.remove("hidden"); }
 function exportData() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(globalRecipes, null, 2)); const a = document.createElement('a'); a.setAttribute("href", dataStr); a.setAttribute("download", `免開伙大廚_料理公式備份.json`); a.click(); }
@@ -491,31 +530,18 @@ function importData(e) {
             const strategy = confirm("偵測到備份檔案！請選擇導入方式：\n\n【按確定】：與現有資料「合併」（會自動過濾重複料理）。\n【按取消】：將「完全覆蓋」並清除目前所有的舊紀錄。");
             
             if (strategy) {
-                // 合併並自動去重（以料理名稱 title 為基準）
-                let skipCount = 0;
-                let addCount = 0;
-                
+                let skipCount = 0; let addCount = 0;
                 imported.forEach(importedItem => {
                     const isDuplicate = globalRecipes.some(existingItem => existingItem.title.trim() === importedItem.title.trim());
-                    if (isDuplicate) {
-                        skipCount++;
-                    } else {
-                        globalRecipes.push(importedItem);
-                        addCount++;
-                    }
+                    if (isDuplicate) { skipCount++; } else { globalRecipes.push(importedItem); addCount++; }
                 });
                 alert(`📥 檔案匯入成功！\n成功合併了 ${addCount} 筆新料理，並自動過濾跳過了 ${skipCount} 筆重複的項目。`);
             } else {
-                // 完全覆蓋
                 globalRecipes = imported;
                 alert("📥 檔案匯入成功！已完全覆蓋現有手帳。");
             }
-            
-            saveRecipes(); 
-            closeIdModal("data-mgr-modal"); 
-        } catch(err) { 
-            alert("檔案格式不符，導入失敗"); 
-        }
+            saveRecipes(); closeIdModal("data-mgr-modal"); 
+        } catch(err) { alert("檔案格式不符，導入失敗"); }
     }; 
     r.readAsText(file);
 }
