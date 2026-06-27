@@ -1,12 +1,7 @@
 // ==========================================
-// 1. 初始化 Supabase 用戶端設定（已暫時關閉雲端，改為純本地 MVP 模式）
+// 1. 初始化設定 (已強制切換為純本地 LocalStorage 離線模式，免設定金鑰)
 // ==========================================
-let supabase = null; // 強迫腳本跳過雲端初始化，直接走 LocalStorage
-
-// 全域狀態管理變數
-let globalRecipes = [];
-let currentUser = null;
-... (後面程式碼完全不動)
+let supabase = null; // 強制關閉雲端初始化，徹底防呆、防報錯崩潰
 
 // 全域狀態管理變數
 let globalRecipes = [];
@@ -53,22 +48,15 @@ const DEMO_RECIPES = [
 // ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
     initDOMEvents();
-    if (supabase) {
-        const { data: { session } } = await supabase.auth.getSession();
-        updateUserStatus(session?.user || null);
-        supabase.auth.onAuthStateChange((_event, session) => {
-            updateUserStatus(session?.user || null);
-        });
-    } else {
-        document.getElementById("user-status").innerHTML = "⚠️ 未設定雲端金鑰 (本地模式)";
-        loadRecipes();
-    }
+    // 移除雲端判斷，直接隱藏載入中，並載入本地資料庫
+    document.getElementById("user-status").innerHTML = "👤 本地離線手帳模式";
+    document.getElementById("auth-btn").style.display = "none"; // 隱藏無效的登入按鈕
+    loadRecipes();
     renderShoppingCart();
 });
 
 function initDOMEvents() {
     // 基礎開關彈窗
-    document.getElementById("auth-btn").addEventListener("click", handleAuthAction);
     document.getElementById("open-add-modal-btn").addEventListener("click", () => openRecipeModal());
     document.getElementById("open-data-mgr-btn").addEventListener("click", openDataMgrModal);
     
@@ -116,8 +104,6 @@ function initDOMEvents() {
     document.getElementById("export-btn").addEventListener("click", exportData);
     document.getElementById("import-file").addEventListener("change", importData);
     document.getElementById("clear-all-btn").addEventListener("click", clearAllData);
-    document.getElementById("send-magic-link-btn").addEventListener("click", sendMagicLink);
-    document.getElementById("migrate-btn").addEventListener("click", migrateLocalToCloud);
 
     document.getElementById("recipe-form").addEventListener("input", () => { isFormDirty = true; });
 }
@@ -203,101 +189,24 @@ function removeCartItem(idx) {
 }
 
 // ==========================================
-// 5. 雲端同步與帳號整合邏輯
-// ==========================================
-function updateUserStatus(user) {
-    currentUser = user;
-    const statusTxt = document.getElementById("user-status");
-    const authBtn = document.getElementById("auth-btn");
-    const cloudInfo = document.getElementById("cloud-info");
-    const cloudActions = document.getElementById("cloud-actions");
-
-    if (user) {
-        statusTxt.innerHTML = `👋 大廚已連線: <span style="color:var(--sage-green); font-weight:bold;">${user.email}</span>`;
-        authBtn.innerText = "登出雲端";
-        cloudInfo.innerText = "✨ 您已成功啟用雲端同步！所有新紀錄將同步保存於 Supabase 安全資料庫中。";
-        cloudActions.classList.remove("hidden");
-    } else {
-        statusTxt.innerHTML = "👤 本地離線模式";
-        authBtn.innerText = "登入雲端帳號";
-        cloudInfo.innerText = "目前為本地離線狀態。登入後可安全啟用跨裝置同步，並將本地紀錄一鍵搬移上雲端。";
-        cloudActions.classList.add("hidden");
-    }
-    loadRecipes();
-}
-
-async function handleAuthAction() {
-    if (currentUser) {
-        if (confirm("確定要登出雲端同步嗎？登出後將切換回本地檢視模式。")) {
-            await supabase.auth.signOut();
-            alert("已成功安全登出。");
-        }
-    } else {
-        if (!supabase) {
-            alert("本站目前未配置 Supabase 金鑰，請開啟金鑰即可運作雲端同步！");
-            return;
-        }
-        document.getElementById("auth-modal").classList.remove("hidden");
-    }
-}
-
-async function sendMagicLink() {
-    const email = document.getElementById("auth-email").value.trim();
-    if (!email) return alert("請輸入有效的 Email 信箱。");
-    const { error } = await supabase.auth.signInWithOtp({
-        email: email, options: { emailRedirectTo: window.location.href }
-    });
-    if (error) { alert("發送失敗: " + error.message); } 
-    else { alert("🚀 登入連結已發送至您的信箱，點擊連結即可自動登入！"); closeIdModal("auth-modal"); }
-}
-
-// ==========================================
-// 6. 資料庫 CRUD 與渲染核心
+// 5. 資料庫 CRUD 與渲染核心
 // ==========================================
 async function loadRecipes() {
-    if (currentUser) {
-        try {
-            const { data, error } = await supabase.from('recipes').select('*').order('date', { ascending: false });
-            if (error) throw error;
-            globalRecipes = data.map(r => mapCloudToLocal(r));
-        } catch (err) {
-            globalRecipes = [];
-        }
-    } else {
-        const localData = localStorage.getItem("nocook_chef_recipes");
-        if (localData) { globalRecipes = JSON.parse(localData); } 
-        else { globalRecipes = [...DEMO_RECIPES]; localStorage.setItem("nocook_chef_recipes", JSON.stringify(globalRecipes)); }
+    const localData = localStorage.getItem("nocook_chef_recipes");
+    if (localData) { 
+        globalRecipes = JSON.parse(localData); 
+    } else { 
+        globalRecipes = [...DEMO_RECIPES]; 
+        localStorage.setItem("nocook_chef_recipes", JSON.stringify(globalRecipes)); 
     }
     renderRecipes(globalRecipes);
     updateDashboardStats();
 }
 
 async function saveRecipes() {
-    if (currentUser) { await loadRecipes(); } 
-    else { localStorage.setItem("nocook_chef_recipes", JSON.stringify(globalRecipes)); renderRecipes(globalRecipes); updateDashboardStats(); }
-}
-
-function mapLocalToCloud(r) {
-    return {
-        id: r.id.startsWith("demo-") || r.id.startsWith("rec_") ? undefined : r.id,
-        user_id: currentUser ? currentUser.id : undefined,
-        title: r.title, date: r.date || null, category: r.category, tags: r.tags,
-        ingredients: r.ingredients, equipment: r.equipment,
-        microwave_settings: r.microwaveSettings, rice_cooker_settings: r.riceCookerSettings,
-        steps: r.steps, result: r.result, ratings: r.ratings, is_repeatable: r.isRepeatable,
-        notes: r.notes, next_adjustment: r.nextAdjustment, total_time: r.totalTime,
-        updated_at: new Date().toISOString()
-    };
-}
-
-function mapCloudToLocal(c) {
-    return {
-        id: c.id, title: c.title, date: c.date, category: c.category, tags: c.tags || [],
-        ingredients: c.ingredients || [], equipment: c.equipment,
-        microwaveSettings: c.microwave_settings || {}, riceCookerSettings: c.rice_cooker_settings || {},
-        steps: c.steps || [], result: c.result, ratings: c.ratings || {}, isRepeatable: c.is_repeatable,
-        notes: c.notes, nextAdjustment: c.next_adjustment, totalTime: c.total_time
-    };
+    localStorage.setItem("nocook_chef_recipes", JSON.stringify(globalRecipes)); 
+    renderRecipes(globalRecipes); 
+    updateDashboardStats();
 }
 
 function renderRecipes(recipesList) {
@@ -368,7 +277,7 @@ function filterRecipes() {
 }
 
 // ==========================================
-// 7. 表單彈窗控制及資料處理
+// 6. 表單彈窗控制及資料處理
 // ==========================================
 function openRecipeModal(recipeId = null) {
     isFormDirty = false;
@@ -474,19 +383,17 @@ async function handleSaveRecipe() {
         steps: steps, result: document.getElementById("form-result").value, totalTime: document.getElementById("form-totaltime").value, isRepeatable: document.getElementById("form-repeatable").checked, notes: document.getElementById("form-notes").value, nextAdjustment: document.getElementById("form-adjustment").value, ratings: { taste: parseInt(document.getElementById("rate-taste").value)||5, doneness: parseInt(document.getElementById("rate-doneness").value)||5, texture: parseInt(document.getElementById("rate-texture").value)||5, convenience: parseInt(document.getElementById("rate-convenience").value)||5 }
     };
 
-    if (currentUser) {
-        const cloudObj = mapLocalToCloud(recipeData);
-        const { error } = id ? await supabase.from('recipes').update(cloudObj).eq('id', id) : await supabase.from('recipes').insert([cloudObj]);
-        if (error) return alert("同步失敗: " + error.message);
-    } else {
-        if (id) { const idx = globalRecipes.findIndex(r => r.id === id); globalRecipes[idx] = recipeData; } else { globalRecipes.unshift(recipeData); }
-    }
-    isFormDirty = false; await saveRecipes(); closeIdModal("recipe-modal"); alert("🎉 料理公式儲存成功！");
+    if (id) { const idx = globalRecipes.findIndex(r => r.id === id); globalRecipes[idx] = recipeData; } else { globalRecipes.unshift(recipeData); }
+    
+    isFormDirty = false; 
+    await saveRecipes(); 
+    closeIdModal("recipe-modal"); 
+    alert("🎉 料理公式儲存成功！");
 }
 
 async function deleteRecipe(id) {
     if (!confirm("確定要刪除這筆紀錄嗎？")) return;
-    if (currentUser) { await supabase.from('recipes').delete().eq('id', id); } else { globalRecipes = globalRecipes.filter(r => r.id !== id); }
+    globalRecipes = globalRecipes.filter(r => r.id !== id);
     await saveRecipes(); alert("已成功刪除。");
 }
 
@@ -509,7 +416,7 @@ function viewRecipeDetail(id) {
 }
 
 // ==========================================
-// 8. 高級 JSON 備份與管理功能
+// 7. JSON 備份與管理功能
 // ==========================================
 function openDataMgrModal() { document.getElementById("mgr-count").innerText = globalRecipes.length; document.getElementById("data-mgr-modal").classList.remove("hidden"); }
 function exportData() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(globalRecipes, null, 2)); const a = document.createElement('a'); a.setAttribute("href", dataStr); a.setAttribute("download", `免開伙大廚_備份.json`); a.click(); }
@@ -519,22 +426,15 @@ function importData(e) {
         try {
             const imported = JSON.parse(evt.target.result);
             globalRecipes = confirm("【按確定】將與原資料合併；【按取消】將覆蓋清除舊資料。") ? [...globalRecipes, ...imported] : imported;
-            if (currentUser) { for (let x of imported) await supabase.from('recipes').insert([mapLocalToCloud(x)]); }
             await saveRecipes(); closeIdModal("data-mgr-modal"); alert("🎉 資料匯入成功！");
         } catch(err) { alert("檔案解析失敗"); }
     }; r.readAsText(file);
 }
-async function migrateLocalToCloud() {
-    const local = localStorage.getItem("nocook_chef_recipes"); if (!local) return alert("本地暫無資料");
-    const list = JSON.parse(local); if (confirm(`搬移 ${list.length} 筆資料上雲端？`)) {
-        for (let x of list) { if (!x.id.startsWith("demo-")) await supabase.from('recipes').insert([mapLocalToCloud(x)]); }
-        localStorage.removeItem("nocook_chef_recipes"); await loadRecipes(); closeIdModal("data-mgr-modal"); alert("🚀 搬移成功！");
-    }
-}
-async function clearAllData() {
+
+function clearAllData() {
     if (confirm("🚨 警告：確定要清空所有紀錄嗎？不可還原！")) {
-        if (currentUser) await supabase.from('recipes').delete().eq('user_id', currentUser.id); else localStorage.removeItem("nocook_chef_recipes");
-        globalRecipes = []; await saveRecipes(); closeIdModal("data-mgr-modal"); alert("已清空。");
+        localStorage.removeItem("nocook_chef_recipes");
+        globalRecipes = []; saveRecipes(); closeIdModal("data-mgr-modal"); alert("已清空。");
     }
 }
 
