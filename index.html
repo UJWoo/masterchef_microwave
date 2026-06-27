@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>免開伙大廚 - 你的微波爐與電鍋料理實驗室</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
     <header class="navbar">
@@ -233,7 +234,7 @@
                         </div>
                         <div class="form-group">
                             <label for="form-totaltime">總料理時間</label>
-                            <input type="text" id="form-totaltime" placeholder="example: 8分鐘">
+                            <input type="text" id="form-totaltime" placeholder="例如：8分鐘">
                         </div>
                     </div>
                     <div class="rating-grid">
@@ -266,12 +267,16 @@
     <div id="detail-modal" class="modal hidden">
         <div class="modal-content notebook-style">
             <div class="modal-header">
-                <h2 id="detail-title">料理公式詳情手帳</h2>
+                <h2>料理公式詳情手帳</h2>
                 <button class="close-btn" id="close-detail-modal">&times;</button>
             </div>
-            <div id="detail-body"></div>
-            <div class="modal-footer">
-                <button id="detail-retry-btn" class="btn btn-primary">🔥 再次挑戰這道料理 (複製基礎配方)</button>
+            <div id="capture-area" style="padding: 10px; border-radius: 8px;">
+                <div id="detail-body"></div>
+                <div id="capture-watermark" class="hidden-watermark">🎨 來自「免開伙大廚」手帳配方分享</div>
+            </div>
+            <div class="modal-footer" style="flex-wrap: wrap; gap: 8px;">
+                <button id="detail-export-img-btn" class="btn btn-primary" style="background-color: #e67e22;">📸 匯出料理公式字卡 (圖片)</button>
+                <button id="detail-retry-btn" class="btn btn-secondary">🔥 再次挑戰</button>
                 <button id="detail-close-btn" class="btn btn-secondary">關閉</button>
             </div>
         </div>
