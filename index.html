@@ -67,6 +67,19 @@
             </div>
             <div id="recipes-grid" class="recipes-grid"></div>
         </section>
+
+        <section class="shopping-cart-section">
+            <div class="cart-card">
+                <div class="cart-header">
+                    <h3>🛒 本週免開伙採買便條紙</h3>
+                    <button class="btn btn-danger btn-sm" id="clear-cart-btn">清空清單</button>
+                </div>
+                <p class="calc-hint">點擊上方料理卡片上的「🛒 放入採買」，系統會自動將食材拉到這裡。去超市時用手機點擊可直接劃線勾選唷！</p>
+                <ul id="shopping-list-container" class="shopping-list">
+                    <li class="cart-empty">目前採買便條紙還是空的，快去挑選想挑戰的料理吧！</li>
+                </ul>
+            </div>
+        </section>
     </main>
 
     <div id="recipe-modal" class="modal hidden">
@@ -137,11 +150,39 @@
                         </select>
                     </div>
 
+                    <div class="calculator-box">
+                        <h4>🧮 萬用微波爐功率換算助手</h4>
+                        <p class="calc-hint">看到網路食譜的瓦數跟家裡不同？在這裡換算好之後再填入公式吧！</p>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>網頁食譜瓦數 (W)</label>
+                                <input type="number" id="calc-recipe-w" value="700">
+                            </div>
+                            <div class="form-group">
+                                <label>食譜加熱時間</label>
+                                <div style="display: flex; gap: 5px;">
+                                    <input type="number" id="calc-recipe-m" value="3" style="width:70px;"> <span style="align-self:center;">分</span>
+                                    <input type="number" id="calc-recipe-s" value="0" style="width:70px;"> <span style="align-self:center;">秒</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row" style="margin-top: 10px;">
+                            <div class="form-group">
+                                <label>我家微波爐瓦數 (W)</label>
+                                <input type="number" id="calc-home-w" value="600">
+                            </div>
+                            <div class="form-group">
+                                <label>💡 換算成我家時間應設為</label>
+                                <div id="calc-result" class="calc-result-display">3 分 30 秒</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div id="microwave-panel" class="equipment-sub-panel">
                         <h4>💡 微波爐設定面板</h4>
                         <div class="form-row">
-                            <div class="form-group"><label>功率 (W)</label><input type="text" id="mw-power" placeholder="例如：700W"></div>
-                            <div class="form-group"><label>加熱時間</label><input type="text" id="mw-time" placeholder="例如：3分鐘"></div>
+                            <div class="form-group"><label>功率 (W)</label><input type="text" id="mw-power" placeholder="例如：600W"></div>
+                            <div class="form-group"><label>加熱時間</label><input type="text" id="mw-time" placeholder="例如：3分30秒"></div>
                         </div>
                         <div class="form-group">
                             <label><input type="checkbox" id="mw-segmented"> 是否分段加熱</label>
@@ -155,42 +196,16 @@
                             </div>
                         </div>
                     </div>
-<div class="calculator-box">
-    <h4>🧮 萬用微波爐功率換算器</h4>
-    <p class="calc-hint">看到網路食譜的瓦數跟家裡不同？一鍵幫您神還原精準時間！</p>
-    <div class="form-row">
-        <div class="form-group">
-            <label>食譜標示瓦數 (W)</label>
-            <input type="number" id="calc-recipe-w" placeholder="例如：700" value="700">
-        </div>
-        <div class="form-group">
-            <label>食譜加熱時間</label>
-            <div style="display: flex; gap: 5px;">
-                <input type="number" id="calc-recipe-m" placeholder="分" value="3"> <span style="align-self:center;">分</span>
-                <input type="number" id="calc-recipe-s" placeholder="秒" value="0"> <span style="align-self:center;">秒</span>
-            </div>
-        </div>
-    </div>
-    <div class="form-row" style="margin-top: 10px;">
-        <div class="form-group">
-            <label>您自家的微波爐瓦數 (W)</label>
-            <input type="number" id="calc-home-w" placeholder="例如：600" value="600">
-        </div>
-        <div class="form-group">
-            <label>💡 您家微波爐應設定為</label>
-            <div id="calc-result" class="calc-result-display">3 分 30 秒</div>
-        </div>
-    </div>
-</div>
+
                     <div id="ricecooker-panel" class="equipment-sub-panel hidden">
                         <h4>🍲 電鍋設定面板</h4>
                         <div class="form-row">
                             <div class="form-group"><label>外鍋水量</label><input type="text" id="rc-water" placeholder="例如：1.5杯 / 200ml"></div>
-                            <div class="form-group"><label>燜蒸時間 (分鐘)</label><input type="number" id="rc-simmer" placeholder="跳起後燜多久"></div>
+                            <div class="form-group"><label>開關跳起後燜幾分鐘</label><input type="number" id="rc-simmer" placeholder="例如：10"></div>
                         </div>
                         <div class="form-row">
                             <div class="form-group"><label>蒸煮次數</label><input type="number" id="rc-steamcount" value="1"></div>
-                            <div class="form-group"><label>內鍋容器</label><input type="text" id="rc-container" placeholder="例如：不鏽鋼內鍋+蒸架"></div>
+                            <div class="form-group"><label>內鍋與架高容器</label><input type="text" id="rc-container" placeholder="例如：不鏽鋼內鍋+高蒸架"></div>
                         </div>
                         <div class="form-group">
                             <label><input type="checkbox" id="rc-cover"> 內鍋是否加蓋</label>
@@ -305,7 +320,7 @@
                 <button class="close-btn" id="close-auth-modal">&times;</button>
             </div>
             <div class="modal-body">
-                <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">輸入您的 Email，系統將發送免密碼登入連結 (Magic Link) 至您的信箱，點擊即可登入同步！</p>
+                <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">輸入您的 Email，系統將發送免密碼登入連結至您的信箱，點擊即可登入同步！</p>
                 <div class="form-group">
                     <label for="auth-email">電子郵件信箱</label>
                     <input type="email" id="auth-email" placeholder="example@mail.com" required>
